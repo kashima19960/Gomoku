@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五子棋游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏁 五子棋游戏</h1>
+        </header>
+        
+        <div class="game-controls">
+            <div class="control-group">
+                <label>游戏模式：</label>
+                <select id="gameMode">
+                    <option value="player">玩家对战</option>
+                    <option value="ai">AI对战</option>
+                </select>
+            </div>
+            
+            <div class="control-group" id="playerOrderGroup">
+                <label>选择：</label>
+                <select id="playerOrder">
+                    <option value="first">玩家先手（黑棋）</option>
+                    <option value="second">玩家后手（白棋）</option>
+                </select>
+            </div>
+            
+            <button id="newGameBtn" class="btn btn-primary">新游戏</button>
+            <button id="resetBtn" class="btn btn-secondary">重置</button>
+        </div>
+        
+        <div class="game-info">
+            <div class="status">
+                <span id="gameStatus">选择游戏模式并开始新游戏</span>
+            </div>
+            <div class="current-player">
+                <span>当前轮到：</span>
+                <span id="currentPlayer">-</span>
+            </div>
+        </div>
+        
+        <div class="game-board-container">
+            <div id="gameBoard" class="game-board"></div>
+        </div>
+        
+        <div class="game-stats">
+            <div class="stat-item">
+                <span class="stat-label">黑棋胜利：</span>
+                <span id="blackWins">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">白棋胜利：</span>
+                <span id="whiteWins">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">平局：</span>
+                <span id="draws">0</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="ai.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
