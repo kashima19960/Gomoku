@@ -6,11 +6,11 @@ class GomokuGame {
         this.BLACK = 1;
         this.WHITE = 2;
         
-        this.board = [];
-        this.currentPlayer = this.BLACK;
+        this.board = [];        this.currentPlayer = this.BLACK;
         this.gameMode = 'player'; // 'player' 或 'ai'
         this.playerColor = this.BLACK; // 玩家在AI模式下的颜色
         this.aiColor = this.WHITE;
+        this.aiDifficulty = 'medium'; // AI难度
         this.gameStarted = false;
         this.gameOver = false;
         this.winner = null;
@@ -37,17 +37,20 @@ class GomokuGame {
     // 初始化UI
     initializeUI() {
         this.gameBoard = document.getElementById('gameBoard');
-        this.gameStatus = document.getElementById('gameStatus');
-        this.currentPlayerDisplay = document.getElementById('currentPlayer');
+        this.gameStatus = document.getElementById('gameStatus');        this.currentPlayerDisplay = document.getElementById('currentPlayer');
         this.gameModeSelect = document.getElementById('gameMode');
         this.playerOrderSelect = document.getElementById('playerOrder');
         this.playerOrderGroup = document.getElementById('playerOrderGroup');
+        this.aiDifficultySelect = document.getElementById('aiDifficulty');
+        this.aiDifficultyGroup = document.getElementById('aiDifficultyGroup');
         this.newGameBtn = document.getElementById('newGameBtn');
         this.resetBtn = document.getElementById('resetBtn');
-        
-        this.createBoardUI();
+          this.createBoardUI();
         this.bindEvents();
         this.updatePlayerOrderVisibility();
+        
+        // 初始化时隐藏AI相关选项
+        this.aiDifficultyGroup.style.display = 'none';
     }
     
     // 创建棋盘UI
@@ -72,14 +75,13 @@ class GomokuGame {
         this.resetBtn.addEventListener('click', () => this.resetGame());
         this.gameModeSelect.addEventListener('change', () => this.updatePlayerOrderVisibility());
     }
-    
-    // 更新玩家顺序选择的可见性
+      // 更新AI相关选项的可见性
     updatePlayerOrderVisibility() {
         const isAiMode = this.gameModeSelect.value === 'ai';
         this.playerOrderGroup.style.display = isAiMode ? 'block' : 'none';
+        this.aiDifficultyGroup.style.display = isAiMode ? 'block' : 'none';
     }
-    
-    // 开始新游戏
+      // 开始新游戏
     startNewGame() {
         this.gameMode = this.gameModeSelect.value;
         
@@ -87,6 +89,10 @@ class GomokuGame {
             const playerOrder = this.playerOrderSelect.value;
             this.playerColor = playerOrder === 'first' ? this.BLACK : this.WHITE;
             this.aiColor = playerOrder === 'first' ? this.WHITE : this.BLACK;
+            this.aiDifficulty = this.aiDifficultySelect.value;
+            
+            // 设置AI难度
+            this.ai.setDifficulty(this.aiDifficulty);
         }
         
         this.initializeBoard();
@@ -95,10 +101,17 @@ class GomokuGame {
         this.gameOver = false;
         this.winner = null;
         this.isAiThinking = false;
-        
-        this.updateBoard();
+          this.updateBoard();
         this.updateGameStatus();
         this.updateCurrentPlayer();
+        
+        // 无法战胜模式的特别提示
+        if (this.gameMode === 'ai' && this.aiDifficulty === 'impossible') {
+            setTimeout(() => {
+                this.updateGameStatus('⚠️ 挑战无法战胜模式！AI将全力以赴');
+                setTimeout(() => this.updateGameStatus(), 2000);
+            }, 1000);
+        }
         
         // 如果AI先手，让AI下第一步
         if (this.gameMode === 'ai' && this.aiColor === this.BLACK) {
@@ -331,8 +344,7 @@ class GomokuGame {
     getCellElement(row, col) {
         return this.gameBoard.querySelector(`[data-row="${row}"][data-col="${col}"]`);
     }
-    
-    // 更新游戏状态显示
+      // 更新游戏状态显示
     updateGameStatus(customMessage = null) {
         if (customMessage) {
             this.gameStatus.textContent = customMessage;
@@ -353,9 +365,21 @@ class GomokuGame {
             if (this.gameMode === 'player') {
                 this.gameStatus.textContent = '玩家对战进行中';
             } else {
-                this.gameStatus.textContent = 'AI对战进行中';
+                const difficultyText = this.getDifficultyText(this.aiDifficulty);
+                this.gameStatus.textContent = `AI对战进行中 (${difficultyText})`;
             }
         }
+    }
+    
+    // 获取难度文本
+    getDifficultyText(difficulty) {
+        const difficultyMap = {
+            'easy': '简单',
+            'medium': '中等',
+            'hard': '困难',
+            'impossible': '无法战胜'
+        };
+        return difficultyMap[difficulty] || '中等';
     }
     
     // 更新当前玩家显示

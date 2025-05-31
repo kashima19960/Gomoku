@@ -60,6 +60,7 @@ select {
     background: white;
     cursor: pointer;
     transition: border-color 0.3s;
+    min-width: 160px;
 }
 
 select:hover {
@@ -70,6 +71,16 @@ select:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#aiDifficulty {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    font-weight: 600;
+}
+
+#aiDifficulty option {
+    padding: 5px;
+    font-weight: 600;
 }
 
 .btn {

@@ -6,6 +6,36 @@ class GomokuAI {
         this.BLACK = 1;
         this.WHITE = 2;
         
+        // 难度设置
+        this.difficulty = 'medium'; // easy, medium, hard, impossible
+        this.difficultySettings = {
+            easy: {
+                depth: 1,
+                candidateLimit: 5,
+                errorRate: 0.3, // 30%概率选择非最优解
+                usePattern: false
+            },
+            medium: {
+                depth: 2,
+                candidateLimit: 10,
+                errorRate: 0.1, // 10%概率选择非最优解
+                usePattern: true
+            },
+            hard: {
+                depth: 3,
+                candidateLimit: 15,
+                errorRate: 0.05, // 5%概率选择非最优解
+                usePattern: true
+            },
+            impossible: {
+                depth: 4,
+                candidateLimit: 20,
+                errorRate: 0, // 永不出错
+                usePattern: true,
+                enhancedDefense: true // 增强防御
+            }
+        };
+        
         // 评估模式的分数权重
         this.SCORES = {
             // 连五
@@ -32,11 +62,23 @@ class GomokuAI {
             [1, 0],   // 垂直
             [1, 1],   // 主对角线
             [1, -1]   // 副对角线
-        ];
+        ];    }
+    
+    // 设置AI难度
+    setDifficulty(difficulty) {
+        if (this.difficultySettings[difficulty]) {
+            this.difficulty = difficulty;
+        }
+    }
+    
+    // 获取当前难度设置
+    getCurrentSettings() {
+        return this.difficultySettings[this.difficulty];
     }
     
     // 获取AI的下一步落子位置
-    getBestMove(board, aiColor, depth = 3) {
+    getBestMove(board, aiColor) {
+        const settings = this.getCurrentSettings();
         const opponent = aiColor === this.BLACK ? this.WHITE : this.BLACK;
         
         // 检查是否有立即获胜的机会
@@ -45,26 +87,85 @@ class GomokuAI {
         
         // 检查是否需要阻止对手获胜
         const blockMove = this.findWinningMove(board, opponent);
-        if (blockMove) return blockMove;
+        if (blockMove) {
+            // 在无法战胜模式下，永远阻挡玩家获胜
+            if (this.difficulty === 'impossible') {
+                return blockMove;
+            }
+            // 其他难度下有小概率不阻挡（模拟失误）
+            if (Math.random() > settings.errorRate) {
+                return blockMove;
+            }
+        }
+        
+        // 无法战胜模式下的额外防御检查
+        if (this.difficulty === 'impossible') {
+            const criticalDefenseMove = this.findCriticalDefenseMove(board, opponent);
+            if (criticalDefenseMove) {
+                return criticalDefenseMove;
+            }
+        }
         
         // 使用极大极小算法搜索最佳位置
-        const candidates = this.getCandidateMoves(board);
-        let bestMove = null;
+        const candidates = this.getCandidateMoves(board, settings.candidateLimit);
+        let bestMoves = [];
         let bestScore = -Infinity;
         
         for (const move of candidates) {
             const newBoard = this.copyBoard(board);
             newBoard[move.row][move.col] = aiColor;
             
-            const score = this.minimax(newBoard, depth - 1, -Infinity, Infinity, false, aiColor, opponent);
+            let score;
+            if (settings.usePattern) {
+                score = this.minimax(newBoard, settings.depth - 1, -Infinity, Infinity, false, aiColor, opponent);
+            } else {
+                // 简单模式使用基础评估
+                score = this.evaluateBoard(newBoard, aiColor) - this.evaluateBoard(newBoard, opponent);
+            }
             
             if (score > bestScore) {
                 bestScore = score;
-                bestMove = move;
+                bestMoves = [move];
+            } else if (score === bestScore) {
+                bestMoves.push(move);
             }
         }
         
-        return bestMove || candidates[0];
+        // 根据难度决定是否选择最优解
+        if (Math.random() < settings.errorRate && bestMoves.length > 1) {
+            // 随机选择一个次优解
+            const randomIndex = Math.floor(Math.random() * Math.min(3, candidates.length));
+            return candidates[randomIndex];
+        }
+        
+        // 从最优解中随机选择一个
+        return bestMoves[Math.floor(Math.random() * bestMoves.length)] || candidates[0];    }
+    
+    // 寻找关键防御位置（针对无法战胜模式）
+    findCriticalDefenseMove(board, opponent) {
+        const criticalMoves = [];
+        
+        // 寻找对手的活三、死四等危险棋型
+        for (let row = 0; row < this.BOARD_SIZE; row++) {
+            for (let col = 0; col < this.BOARD_SIZE; col++) {
+                if (board[row][col] === this.EMPTY) {
+                    // 模拟对手在此位置下棋
+                    board[row][col] = opponent;
+                    const score = this.evaluatePositionForColor(board, row, col, opponent);
+                    board[row][col] = this.EMPTY;
+                    
+                    // 如果对手在此位置能形成强势棋型，则标记为关键防御点
+                    if (score >= this.SCORES.LIVE_THREE) {
+                        criticalMoves.push({ row, col, score });
+                    }
+                }
+            }
+        }
+        
+        // 按威胁程度排序，优先防御最危险的位置
+        criticalMoves.sort((a, b) => b.score - a.score);
+        
+        return criticalMoves.length > 0 ? criticalMoves[0] : null;
     }
     
     // Minimax算法与Alpha-Beta剪枝
@@ -75,7 +176,8 @@ class GomokuAI {
         if (winner === opponent) return -this.SCORES.FIVE;
         if (depth === 0) return this.evaluateBoard(board, aiColor) - this.evaluateBoard(board, opponent);
         
-        const candidates = this.getCandidateMoves(board, 8); // 限制搜索范围
+        const settings = this.getCurrentSettings();
+        const candidates = this.getCandidateMoves(board, Math.min(8, settings.candidateLimit)); // 限制搜索范围
         
         if (isMaximizing) {
             let maxEval = -Infinity;
@@ -209,15 +311,25 @@ class GomokuAI {
         
         return score;
     }
-    
-    // 评估棋盘状态
+      // 评估棋盘状态
     evaluateBoard(board, color) {
         let score = 0;
+        const settings = this.getCurrentSettings();
         
         for (let row = 0; row < this.BOARD_SIZE; row++) {
             for (let col = 0; col < this.BOARD_SIZE; col++) {
                 if (board[row][col] === color) {
-                    score += this.evaluatePositionForColor(board, row, col, color);
+                    let positionScore = this.evaluatePositionForColor(board, row, col, color);
+                    
+                    // 无法战胜模式下增强位置价值评估
+                    if (this.difficulty === 'impossible') {
+                        positionScore *= 1.2;
+                        // 中心位置额外加分
+                        const centerDistance = Math.abs(row - 7) + Math.abs(col - 7);
+                        positionScore += (14 - centerDistance) * 2;
+                    }
+                    
+                    score += positionScore;
                 }
             }
         }
@@ -259,36 +371,43 @@ class GomokuAI {
         
         return pattern;
     }
-    
-    // 根据模式计算分数
+      // 根据模式计算分数
     getPatternScore(pattern) {
+        const settings = this.getCurrentSettings();
+        let baseScore = 0;
+        
         // 连五
-        if (pattern.includes('OOOOO')) return this.SCORES.FIVE;
+        if (pattern.includes('OOOOO')) baseScore = this.SCORES.FIVE;
         
         // 活四
-        if (pattern.includes('_OOOO_')) return this.SCORES.LIVE_FOUR;
+        else if (pattern.includes('_OOOO_')) baseScore = this.SCORES.LIVE_FOUR;
         
         // 死四
-        if (pattern.includes('XOOOO_') || pattern.includes('_OOOOX')) return this.SCORES.DEAD_FOUR;
+        else if (pattern.includes('XOOOO_') || pattern.includes('_OOOOX')) baseScore = this.SCORES.DEAD_FOUR;
         
         // 活三
-        if (pattern.includes('_OOO_')) return this.SCORES.LIVE_THREE;
-        if (pattern.includes('_OO_O_') || pattern.includes('_O_OO_')) return this.SCORES.LIVE_THREE;
+        else if (pattern.includes('_OOO_')) baseScore = this.SCORES.LIVE_THREE;
+        else if (pattern.includes('_OO_O_') || pattern.includes('_O_OO_')) baseScore = this.SCORES.LIVE_THREE;
         
         // 死三
-        if (pattern.includes('XOOO_') || pattern.includes('_OOOX')) return this.SCORES.DEAD_THREE;
+        else if (pattern.includes('XOOO_') || pattern.includes('_OOOX')) baseScore = this.SCORES.DEAD_THREE;
         
         // 活二
-        if (pattern.includes('_OO_')) return this.SCORES.LIVE_TWO;
-        if (pattern.includes('_O_O_')) return this.SCORES.LIVE_TWO;
+        else if (pattern.includes('_OO_')) baseScore = this.SCORES.LIVE_TWO;
+        else if (pattern.includes('_O_O_')) baseScore = this.SCORES.LIVE_TWO;
         
         // 死二
-        if (pattern.includes('XOO_') || pattern.includes('_OOX')) return this.SCORES.DEAD_TWO;
+        else if (pattern.includes('XOO_') || pattern.includes('_OOX')) baseScore = this.SCORES.DEAD_TWO;
         
         // 活一
-        if (pattern.includes('_O_')) return this.SCORES.LIVE_ONE;
+        else if (pattern.includes('_O_')) baseScore = this.SCORES.LIVE_ONE;
         
-        return 0;
+        // 无法战胜模式下提高威胁棋型的分数
+        if (this.difficulty === 'impossible' && baseScore >= this.SCORES.LIVE_THREE) {
+            baseScore *= 1.5;
+        }
+        
+        return baseScore;
     }
     
     // 评估方向上的模式
