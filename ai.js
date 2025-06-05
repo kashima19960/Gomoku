@@ -495,4 +495,323 @@ class GomokuAI {
     copyBoard(board) {
         return board.map(row => [...row]);
     }
+    
+    // 提示功能系统
+    getHint(board, playerColor, hintLevel = 'simple') {
+        const hintSettings = {
+            simple: {
+                depth: 1,
+                analysisCount: 3,
+                description: '基础攻防提示'
+            },
+            expert: {
+                depth: 2,
+                analysisCount: 5,
+                description: '高级战术提示'
+            },
+            master: {
+                depth: 3,
+                analysisCount: 8,
+                description: '大师级策略提示'
+            }
+        };
+
+        const settings = hintSettings[hintLevel];
+        if (!settings) return null;
+
+        // 获取最佳候选位置
+        const candidates = this.getBestCandidates(board, playerColor, settings.analysisCount);
+        
+        if (candidates.length === 0) return null;
+
+        // 分析候选位置
+        const analysis = candidates.map(pos => {
+            const tempBoard = this.copyBoard(board);
+            tempBoard[pos.row][pos.col] = playerColor;
+            
+            const moveAnalysis = this.analyzeMove(tempBoard, pos.row, pos.col, playerColor, settings.depth);
+            
+            return {
+                row: pos.row,
+                col: pos.col,
+                score: pos.score,
+                analysis: moveAnalysis,
+                priority: this.getMovePriority(moveAnalysis)
+            };
+        });
+
+        // 根据提示级别返回不同的信息
+        return this.formatHintResult(analysis, hintLevel, settings);
+    }
+
+    // 获取最佳候选位置
+    getBestCandidates(board, color, limit) {
+        const opponent = color === this.BLACK ? this.WHITE : this.BLACK;
+        const candidates = [];
+
+        // 检查立即获胜
+        const winMove = this.findWinningMove(board, color);
+        if (winMove) {
+            candidates.push({
+                row: winMove.row,
+                col: winMove.col,
+                score: this.SCORES.FIVE,
+                type: 'win'
+            });
+        }
+
+        // 检查阻挡对手获胜
+        const blockMove = this.findWinningMove(board, opponent);
+        if (blockMove) {
+            candidates.push({
+                row: blockMove.row,
+                col: blockMove.col,
+                score: this.SCORES.LIVE_FOUR,
+                type: 'block'
+            });
+        }
+
+        // 获取其他高分位置
+        const otherMoves = this.getCandidatePositions(board);
+        for (const pos of otherMoves) {
+            if (candidates.length >= limit) break;
+            
+            // 跳过已添加的位置
+            if (candidates.some(c => c.row === pos.row && c.col === pos.col)) continue;
+
+            const score = this.evaluatePosition(board, pos.row, pos.col, color);
+            if (score > 0) {
+                candidates.push({
+                    row: pos.row,
+                    col: pos.col,
+                    score: score,
+                    type: 'strategy'
+                });
+            }
+        }
+
+        // 按分数排序
+        candidates.sort((a, b) => b.score - a.score);
+        return candidates.slice(0, limit);
+    }
+
+    // 分析单步棋的效果
+    analyzeMove(board, row, col, color, depth) {
+        const opponent = color === this.BLACK ? this.WHITE : this.BLACK;
+        const analysis = {
+            attackValue: 0,
+            defenseValue: 0,
+            patterns: [],
+            threats: [],
+            isForbidden: false,
+            description: ''
+        };
+
+        // 检查禁手
+        if (color === this.BLACK) {
+            const forbiddenCheck = this.forbiddenRules.checkForbiddenMove(board, row, col, color);
+            analysis.isForbidden = forbiddenCheck.isForbidden;
+            if (forbiddenCheck.isForbidden) {
+                analysis.description = `禁手：${forbiddenCheck.reason}`;
+                return analysis;
+            }
+        }
+
+        // 分析攻击价值
+        const myPatterns = this.getPositionPatterns(board, row, col, color);
+        analysis.patterns = myPatterns;
+        analysis.attackValue = this.calculatePatternScore(myPatterns);
+
+        // 分析防御价值
+        const opponentPatterns = this.getPositionPatterns(board, row, col, opponent);
+        analysis.defenseValue = this.calculatePatternScore(opponentPatterns);
+
+        // 生成描述
+        analysis.description = this.generateMoveDescription(analysis, color);
+
+        return analysis;
+    }
+
+    // 获取位置的棋型模式
+    getPositionPatterns(board, row, col, color) {
+        const patterns = [];
+        const tempBoard = this.copyBoard(board);
+        tempBoard[row][col] = color;
+
+        for (const [dx, dy] of this.DIRECTIONS) {
+            const pattern = this.analyzeDirection(tempBoard, row, col, dx, dy, color);
+            if (pattern.count >= 2) {
+                patterns.push({
+                    direction: [dx, dy],
+                    count: pattern.count,
+                    blocked: pattern.blocked,
+                    type: this.classifyPattern(pattern)
+                });
+            }
+        }
+
+        return patterns;
+    }
+
+    // 分析方向上的连子情况
+    analyzeDirection(board, row, col, dx, dy, color) {
+        let count = 1; // 包括当前位置
+        let leftBlocked = false;
+        let rightBlocked = false;
+
+        // 向左/上方向搜索
+        let r = row - dx, c = col - dy;
+        while (r >= 0 && r < this.BOARD_SIZE && c >= 0 && c < this.BOARD_SIZE && board[r][c] === color) {
+            count++;
+            r -= dx;
+            c -= dy;
+        }
+        if (r < 0 || r >= this.BOARD_SIZE || c < 0 || c >= this.BOARD_SIZE || board[r][c] !== this.EMPTY) {
+            leftBlocked = true;
+        }
+
+        // 向右/下方向搜索
+        r = row + dx;
+        c = col + dy;
+        while (r >= 0 && r < this.BOARD_SIZE && c >= 0 && c < this.BOARD_SIZE && board[r][c] === color) {
+            count++;
+            r += dx;
+            c += dy;
+        }
+        if (r < 0 || r >= this.BOARD_SIZE || c < 0 || c >= this.BOARD_SIZE || board[r][c] !== this.EMPTY) {
+            rightBlocked = true;
+        }
+
+        return {
+            count: count,
+            blocked: leftBlocked + rightBlocked
+        };
+    }
+
+    // 分类棋型
+    classifyPattern(pattern) {
+        if (pattern.count >= 5) return 'FIVE';
+        if (pattern.count === 4) {
+            return pattern.blocked === 0 ? 'LIVE_FOUR' : 'DEAD_FOUR';
+        }
+        if (pattern.count === 3) {
+            return pattern.blocked === 0 ? 'LIVE_THREE' : 'DEAD_THREE';
+        }
+        if (pattern.count === 2) {
+            return pattern.blocked === 0 ? 'LIVE_TWO' : 'DEAD_TWO';
+        }
+        return 'ONE';
+    }
+
+    // 计算棋型分数
+    calculatePatternScore(patterns) {
+        let score = 0;
+        for (const pattern of patterns) {
+            score += this.SCORES[pattern.type] || 0;
+        }
+        return score;
+    }
+
+    // 获取移动优先级
+    getMovePriority(analysis) {
+        if (analysis.isForbidden) return 'forbidden';
+        if (analysis.patterns.some(p => p.type === 'FIVE')) return 'win';
+        if (analysis.defenseValue >= this.SCORES.LIVE_FOUR) return 'critical_defense';
+        if (analysis.attackValue >= this.SCORES.LIVE_FOUR) return 'attack';
+        if (analysis.defenseValue >= this.SCORES.LIVE_THREE) return 'defense';
+        if (analysis.attackValue >= this.SCORES.LIVE_THREE) return 'good_attack';
+        return 'normal';
+    }
+
+    // 生成移动描述
+    generateMoveDescription(analysis, color) {
+        if (analysis.isForbidden) {
+            return analysis.description; // 已经设置了禁手描述
+        }
+
+        const descriptions = [];
+        
+        // 分析攻击模式
+        const attackPatterns = analysis.patterns.filter(p => ['FIVE', 'LIVE_FOUR', 'DEAD_FOUR', 'LIVE_THREE'].includes(p.type));
+        if (attackPatterns.length > 0) {
+            const best = attackPatterns.reduce((a, b) => (this.SCORES[a.type] || 0) > (this.SCORES[b.type] || 0) ? a : b);
+            switch (best.type) {
+                case 'FIVE': descriptions.push('🏆 获胜！'); break;
+                case 'LIVE_FOUR': descriptions.push('⚔️ 活四进攻'); break;
+                case 'DEAD_FOUR': descriptions.push('🗡️ 死四进攻'); break;
+                case 'LIVE_THREE': descriptions.push('🎯 活三进攻'); break;
+            }
+        }
+
+        // 分析防御价值
+        if (analysis.defenseValue >= this.SCORES.LIVE_FOUR) {
+            descriptions.push('🛡️ 关键防守');
+        } else if (analysis.defenseValue >= this.SCORES.LIVE_THREE) {
+            descriptions.push('🔒 重要防守');
+        }
+
+        return descriptions.join(' ') || '📍 常规落子';
+    }
+
+    // 格式化提示结果
+    formatHintResult(analysis, hintLevel, settings) {
+        const topMoves = analysis.slice(0, hintLevel === 'simple' ? 1 : hintLevel === 'expert' ? 2 : 3);
+        
+        const hint = {
+            level: hintLevel,
+            description: settings.description,
+            suggestions: topMoves.map(move => ({
+                row: move.row,
+                col: move.col,
+                priority: move.priority,
+                description: move.analysis.description,
+                confidence: this.calculateConfidence(move.score, move.priority)
+            })),
+            explanation: this.generateHintExplanation(topMoves, hintLevel)
+        };
+
+        return hint;
+    }
+
+    // 计算建议的可信度
+    calculateConfidence(score, priority) {
+        const priorityScores = {
+            win: 100,
+            critical_defense: 95,
+            attack: 80,
+            defense: 70,
+            good_attack: 60,
+            normal: 40,
+            forbidden: 0
+        };
+        return priorityScores[priority] || 40;
+    }
+
+    // 生成提示解释
+    generateHintExplanation(moves, level) {
+        if (moves.length === 0) return '暂无明显的好棋。';
+
+        const topMove = moves[0];
+        let explanation = '';
+
+        switch (level) {
+            case 'simple':
+                explanation = `推荐位置：第${topMove.row + 1}行第${topMove.col + 1}列。${topMove.analysis.description}`;
+                break;
+            case 'expert':
+                explanation = `分析了${moves.length}个候选位置。最佳选择：第${topMove.row + 1}行第${topMove.col + 1}列（${topMove.analysis.description}）`;
+                if (moves.length > 1) {
+                    explanation += `，备选：第${moves[1].row + 1}行第${moves[1].col + 1}列`;
+                }
+                break;
+            case 'master':
+                explanation = `深度分析结果：\n`;
+                moves.forEach((move, index) => {
+                    explanation += `${index + 1}. 第${move.row + 1}行第${move.col + 1}列 - ${move.analysis.description}（可信度：${move.confidence}%）\n`;
+                });
+                break;
+        }
+
+        return explanation;
+    }
 }

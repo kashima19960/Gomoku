@@ -35,9 +35,19 @@
                     <option value="medium" selected>🟡 中等</option>
                     <option value="hard">🔴 困难</option>
                     <option value="impossible">⚫ 无法战胜</option>
+                </select>            </div>
+            
+            <div class="control-group" id="hintGroup" style="display: none;">
+                <label>提示强度：</label>
+                <select id="hintLevel">
+                    <option value="simple">💡 简单提示</option>
+                    <option value="expert" selected>🎯 高手提示</option>
+                    <option value="master">👑 大师提示</option>
                 </select>
-            </div>            <button id="newGameBtn" class="btn btn-primary">新游戏</button>
+            </div>
+              <button id="newGameBtn" class="btn btn-primary">新游戏</button>
             <button id="resetBtn" class="btn btn-secondary">重置</button>
+            <button id="hintBtn" class="btn btn-hint" style="display: none;">💡 获取提示</button>
             <button id="rulesBtn" class="btn btn-info">禁手规则</button>
             <button id="tutorialBtn" class="btn btn-success">新手教程</button>
             <button id="debugBtn" class="btn btn-warning">调试面板</button>

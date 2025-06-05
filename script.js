@@ -93,14 +93,19 @@ class GomokuGame {
         this.gameModeSelect = document.getElementById('gameMode');
         this.playerOrderSelect = document.getElementById('playerOrder');
         this.playerOrderGroup = document.getElementById('playerOrderGroup');
-        this.aiDifficultySelect = document.getElementById('aiDifficulty');        this.aiDifficultyGroup = document.getElementById('aiDifficultyGroup');        this.newGameBtn = document.getElementById('newGameBtn');        this.resetBtn = document.getElementById('resetBtn');
-        this.rulesBtn = document.getElementById('rulesBtn');
+        this.aiDifficultySelect = document.getElementById('aiDifficulty');        this.aiDifficultyGroup = document.getElementById('aiDifficultyGroup');        this.newGameBtn = document.getElementById('newGameBtn');        this.resetBtn = document.getElementById('resetBtn');        this.rulesBtn = document.getElementById('rulesBtn');
         this.tutorialBtn = document.getElementById('tutorialBtn');
         this.debugBtn = document.getElementById('debugBtn');
+        this.hintBtn = document.getElementById('hintBtn');
+        this.hintLevelSelect = document.getElementById('hintLevel');
+        this.hintGroup = document.getElementById('hintGroup');
         
-        this.createBoardUI();
+        // 提示相关状态
+        this.currentHints = [];
+        this.hintCooldown = false;
+          this.createBoardUI();
         this.bindEvents();
-        this.updatePlayerOrderVisibility();
+        this.updateGameModeVisibility();
         
         // 初始化时隐藏AI相关选项
         this.aiDifficultyGroup.style.display = 'none';
@@ -120,19 +125,23 @@ class GomokuGame {
                 this.gameBoard.appendChild(cell);
             }
         }
-    }
-      // 绑定事件
-    bindEvents() {        this.newGameBtn.addEventListener('click', () => this.startNewGame());        this.resetBtn.addEventListener('click', () => this.resetGame());
+    }    // 绑定事件
+    bindEvents() {
+        this.newGameBtn.addEventListener('click', () => this.startNewGame());
+        this.resetBtn.addEventListener('click', () => this.resetGame());
         this.rulesBtn.addEventListener('click', () => this.showRulesExplanation());
         this.tutorialBtn.addEventListener('click', () => this.startTutorial());
         this.debugBtn.addEventListener('click', () => this.toggleDebugPanel());
-        this.gameModeSelect.addEventListener('change', () => this.updatePlayerOrderVisibility());
+        this.hintBtn.addEventListener('click', () => this.getHint());
+        this.gameModeSelect.addEventListener('change', () => this.updateGameModeVisibility());
     }
-      // 更新AI相关选项的可见性
-    updatePlayerOrderVisibility() {
+      // 更新游戏模式相关选项的可见性
+    updateGameModeVisibility() {
         const isAiMode = this.gameModeSelect.value === 'ai';
         this.playerOrderGroup.style.display = isAiMode ? 'block' : 'none';
         this.aiDifficultyGroup.style.display = isAiMode ? 'block' : 'none';
+        this.hintGroup.style.display = isAiMode ? 'block' : 'none';
+        this.hintBtn.style.display = isAiMode ? 'block' : 'none';
     }    // 开始新游戏
     startNewGame() {
         this.gameMode = this.gameModeSelect.value;
@@ -153,9 +162,11 @@ class GomokuGame {
         this.gameOver = false;
         this.winner = null;
         this.isAiThinking = false;
-        
-        // 清理禁手规则缓存以提高性能
+          // 清理禁手规则缓存以提高性能
         this.forbiddenRules.clearCache();
+        
+        // 清除提示
+        this.clearHintsFromBoard();
         
         this.updateBoard();
         this.updateGameStatus();
@@ -203,10 +214,12 @@ class GomokuGame {
         if (this.gameMode === 'ai' && this.currentPlayer === this.aiColor) return;
         
         this.makeMove(row, col);
-    }
-      // 下棋
+    }    // 下棋
     makeMove(row, col) {
         if (this.board[row][col] !== this.EMPTY) return false;
+        
+        // 清除提示
+        this.clearHintsFromBoard();
         
         // 检查禁手规则
         const forbiddenCheck = this.forbiddenRules.checkForbiddenMove(this.board, row, col, this.currentPlayer);
@@ -920,9 +933,195 @@ class GomokuGame {
             
             ${avgTime < 1.0 ? '✅ 性能优秀！' : avgTime < 5.0 ? '⚠️ 性能良好' : '❌ 性能需要优化'}
         `;
-        
-        this.showModal('性能测试结果', result);
+          this.showModal('性能测试结果', result);
         console.log(result);
+    }
+    
+    // ======== 提示功能 ========
+    
+    // 获取提示
+    getHint() {
+        // 检查是否在AI模式
+        if (this.gameMode !== 'ai') {
+            this.showModal('提示功能', '提示功能仅在人机对战模式下可用！', 'warning');
+            return;
+        }
+        
+        // 检查游戏是否开始
+        if (!this.gameStarted) {
+            this.showModal('提示功能', '请先开始新游戏！', 'warning');
+            return;
+        }
+        
+        // 检查游戏是否结束
+        if (this.gameOver) {
+            this.showModal('提示功能', '游戏已结束，无需提示！', 'info');
+            return;
+        }
+        
+        // 检查是否轮到玩家下棋
+        if (this.currentPlayer !== this.playerColor) {
+            this.showModal('提示功能', '请等待AI下棋完成！', 'warning');
+            return;
+        }
+        
+        // 检查冷却时间
+        if (this.hintCooldown) {
+            this.showModal('提示功能', '请稍等，提示功能冷却中...', 'warning');
+            return;
+        }
+        
+        // 获取提示级别
+        const hintLevel = this.hintLevelSelect.value;
+        
+        // 显示加载状态
+        this.hintBtn.disabled = true;
+        this.hintBtn.textContent = '🔄 分析中...';
+        
+        // 使用setTimeout来避免UI阻塞
+        setTimeout(() => {
+            try {
+                // 获取AI提示
+                const hint = this.ai.getHint(this.board, this.playerColor, hintLevel);
+                
+                if (hint && hint.suggestions.length > 0) {
+                    this.showHintResult(hint);
+                    this.displayHintOnBoard(hint.suggestions);
+                } else {
+                    this.showModal('提示功能', '暂时没有找到明显的好棋，请根据局面自由发挥。', 'info');
+                }
+            } catch (error) {
+                console.error('获取提示时出错:', error);
+                this.showModal('提示功能', '获取提示时出现错误，请稍后再试。', 'error');
+            }
+            
+            // 恢复按钮状态
+            this.hintBtn.disabled = false;
+            this.hintBtn.textContent = '💡 获取提示';
+            
+            // 设置冷却时间
+            this.startHintCooldown();
+        }, 100);
+    }
+    
+    // 显示提示结果
+    showHintResult(hint) {
+        const levelIcons = {
+            simple: '💡',
+            expert: '🎯',
+            master: '👑'
+        };
+        
+        const levelNames = {
+            simple: '简单提示',
+            expert: '高手提示',
+            master: '大师提示'
+        };
+        
+        let content = `
+            <div class="hint-modal">
+                <h3>${levelIcons[hint.level]} ${levelNames[hint.level]}</h3>
+                <p>${hint.description}</p>
+                
+                <div class="hint-suggestion-list">
+                    <h4>推荐位置：</h4>
+        `;
+        
+        hint.suggestions.forEach((suggestion, index) => {
+            const priorityColors = {
+                win: 'priority-win',
+                critical_defense: 'priority-critical_defense',
+                attack: 'priority-attack',
+                defense: '',
+                good_attack: '',
+                normal: '',
+                forbidden: ''
+            };
+            
+            const priorityNames = {
+                win: '🏆 获胜',
+                critical_defense: '🛡️ 关键防守',
+                attack: '⚔️ 强攻',
+                defense: '🔒 防守',
+                good_attack: '🎯 进攻',
+                normal: '📍 常规',
+                forbidden: '🚫 禁手'
+            };
+            
+            content += `
+                <div class="hint-item ${priorityColors[suggestion.priority]}">
+                    <div class="hint-position">
+                        ${index + 1}. 第${suggestion.row + 1}行第${suggestion.col + 1}列
+                        <span class="hint-confidence">${suggestion.confidence}%</span>
+                    </div>
+                    <div class="hint-description">
+                        ${priorityNames[suggestion.priority]} - ${suggestion.description}
+                    </div>
+                </div>
+            `;
+        });
+        
+        content += `
+                </div>
+                
+                <div class="hint-explanation">
+                    <strong>详细分析：</strong><br>
+                    ${hint.explanation}
+                </div>
+            </div>
+        `;
+        
+        this.showModal('AI智能提示', content, 'info');
+    }
+    
+    // 在棋盘上显示提示
+    displayHintOnBoard(suggestions) {
+        // 清除之前的提示
+        this.clearHintsFromBoard();
+        
+        suggestions.forEach((suggestion, index) => {
+            const cell = this.gameBoard.children[suggestion.row * this.BOARD_SIZE + suggestion.col];
+            if (cell && !cell.classList.contains('occupied')) {
+                const hint = document.createElement('div');
+                hint.className = `hint-suggestion priority-${suggestion.priority}`;
+                hint.textContent = index + 1;
+                hint.title = `${suggestion.description} (可信度: ${suggestion.confidence}%)`;
+                
+                // 点击提示可直接下棋
+                hint.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.clearHintsFromBoard();
+                    this.handleCellClick({ target: cell });
+                });
+                
+                cell.appendChild(hint);
+                this.currentHints.push(hint);
+            }
+        });
+        
+        // 5秒后自动清除提示
+        setTimeout(() => {
+            this.clearHintsFromBoard();
+        }, 5000);
+    }
+    
+    // 清除棋盘上的提示
+    clearHintsFromBoard() {
+        this.currentHints.forEach(hint => {
+            if (hint.parentNode) {
+                hint.parentNode.removeChild(hint);
+            }
+        });
+        this.currentHints = [];
+    }
+    
+    // 开始提示冷却
+    startHintCooldown() {
+        this.hintCooldown = true;
+        
+        setTimeout(() => {
+            this.hintCooldown = false;
+        }, 3000); // 3秒冷却时间
     }
 }
 
