@@ -13,9 +13,12 @@ class GomokuGame {
         this.aiDifficulty = 'medium'; // AI难度
         this.gameStarted = false;
         this.gameOver = false;
-        this.winner = null;
-        this.ai = new GomokuAI();
+        this.winner = null;        this.ai = new GomokuAI();
         this.isAiThinking = false;
+        this.forbiddenRules = new ForbiddenRules();
+        
+        // 教程系统
+        this.tutorial = null;
         
         // 统计数据
         this.stats = {
@@ -23,10 +26,59 @@ class GomokuGame {
             whiteWins: parseInt(localStorage.getItem('whiteWins') || '0'),
             draws: parseInt(localStorage.getItem('draws') || '0')
         };
-        
-        this.initializeBoard();
+          this.initializeBoard();
         this.initializeUI();
         this.updateStats();
+        
+        // 显示欢迎信息
+        this.showWelcomeMessage();
+    }
+    
+    // 显示欢迎信息
+    showWelcomeMessage() {
+        // 检查是否是第一次访问
+        const hasVisited = localStorage.getItem('hasVisited');
+        if (!hasVisited) {
+            setTimeout(() => {
+                const welcomeMessage = `
+                    <div class="welcome-content">
+                        <h3>🎉 欢迎来到五子棋禁手规则游戏！</h3>
+                        <p>这是一个完整的五子棋游戏，实现了标准的禁手规则。</p>
+                        
+                        <div class="feature-highlights">
+                            <div class="feature-item">
+                                <span class="feature-icon">🎓</span>
+                                <div>
+                                    <strong>新手？</strong><br>
+                                    点击"新手教程"学习禁手规则
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <span class="feature-icon">🤖</span>
+                                <div>
+                                    <strong>挑战AI</strong><br>
+                                    4个难度等级，无法战胜模式等你挑战
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <span class="feature-icon">🛠️</span>
+                                <div>
+                                    <strong>调试工具</strong><br>
+                                    实时分析局面，了解禁手规则细节
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="rule-reminder">
+                            <strong>重要提醒:</strong> 禁手规则仅对黑棋（先手）有效，红色标记会提示禁手位置。
+                        </div>
+                    </div>
+                `;
+                
+                this.showModal('欢迎', welcomeMessage, 'welcome');
+                localStorage.setItem('hasVisited', 'true');
+            }, 1000);
+        }
     }
     
     // 初始化棋盘
@@ -41,11 +93,12 @@ class GomokuGame {
         this.gameModeSelect = document.getElementById('gameMode');
         this.playerOrderSelect = document.getElementById('playerOrder');
         this.playerOrderGroup = document.getElementById('playerOrderGroup');
-        this.aiDifficultySelect = document.getElementById('aiDifficulty');
-        this.aiDifficultyGroup = document.getElementById('aiDifficultyGroup');
-        this.newGameBtn = document.getElementById('newGameBtn');
-        this.resetBtn = document.getElementById('resetBtn');
-          this.createBoardUI();
+        this.aiDifficultySelect = document.getElementById('aiDifficulty');        this.aiDifficultyGroup = document.getElementById('aiDifficultyGroup');        this.newGameBtn = document.getElementById('newGameBtn');        this.resetBtn = document.getElementById('resetBtn');
+        this.rulesBtn = document.getElementById('rulesBtn');
+        this.tutorialBtn = document.getElementById('tutorialBtn');
+        this.debugBtn = document.getElementById('debugBtn');
+        
+        this.createBoardUI();
         this.bindEvents();
         this.updatePlayerOrderVisibility();
         
@@ -68,11 +121,11 @@ class GomokuGame {
             }
         }
     }
-    
-    // 绑定事件
-    bindEvents() {
-        this.newGameBtn.addEventListener('click', () => this.startNewGame());
-        this.resetBtn.addEventListener('click', () => this.resetGame());
+      // 绑定事件
+    bindEvents() {        this.newGameBtn.addEventListener('click', () => this.startNewGame());        this.resetBtn.addEventListener('click', () => this.resetGame());
+        this.rulesBtn.addEventListener('click', () => this.showRulesExplanation());
+        this.tutorialBtn.addEventListener('click', () => this.startTutorial());
+        this.debugBtn.addEventListener('click', () => this.toggleDebugPanel());
         this.gameModeSelect.addEventListener('change', () => this.updatePlayerOrderVisibility());
     }
       // 更新AI相关选项的可见性
@@ -80,8 +133,7 @@ class GomokuGame {
         const isAiMode = this.gameModeSelect.value === 'ai';
         this.playerOrderGroup.style.display = isAiMode ? 'block' : 'none';
         this.aiDifficultyGroup.style.display = isAiMode ? 'block' : 'none';
-    }
-      // 开始新游戏
+    }    // 开始新游戏
     startNewGame() {
         this.gameMode = this.gameModeSelect.value;
         
@@ -101,9 +153,16 @@ class GomokuGame {
         this.gameOver = false;
         this.winner = null;
         this.isAiThinking = false;
-          this.updateBoard();
+        
+        // 清理禁手规则缓存以提高性能
+        this.forbiddenRules.clearCache();
+        
+        this.updateBoard();
         this.updateGameStatus();
         this.updateCurrentPlayer();
+        
+        // 显示禁手位置警告（仅对黑棋）
+        this.updateForbiddenWarnings();
         
         // 无法战胜模式的特别提示
         if (this.gameMode === 'ai' && this.aiDifficulty === 'impossible') {
@@ -125,10 +184,12 @@ class GomokuGame {
         this.gameOver = false;
         this.winner = null;
         this.isAiThinking = false;
-        this.initializeBoard();
-        this.updateBoard();
+        this.initializeBoard();        this.updateBoard();
         this.updateGameStatus();
         this.updateCurrentPlayer();
+        
+        // 显示禁手位置警告（仅对黑棋）
+        this.updateForbiddenWarnings();
     }
     
     // 处理棋格点击
@@ -143,10 +204,16 @@ class GomokuGame {
         
         this.makeMove(row, col);
     }
-    
-    // 下棋
+      // 下棋
     makeMove(row, col) {
         if (this.board[row][col] !== this.EMPTY) return false;
+        
+        // 检查禁手规则
+        const forbiddenCheck = this.forbiddenRules.checkForbiddenMove(this.board, row, col, this.currentPlayer);
+        if (forbiddenCheck.isForbidden) {
+            this.handleForbiddenMove(forbiddenCheck);
+            return false;
+        }
         
         this.board[row][col] = this.currentPlayer;
         this.updateBoard();
@@ -161,10 +228,12 @@ class GomokuGame {
             this.endGame(null);
             return true;
         }
-        
-        // 切换玩家
+          // 切换玩家
         this.switchPlayer();
         this.updateCurrentPlayer();
+        
+        // 更新禁手警告
+        this.updateForbiddenWarnings();
         
         // 如果是AI模式且轮到AI，让AI下棋
         if (this.gameMode === 'ai' && this.currentPlayer === this.aiColor && !this.gameOver) {
@@ -172,6 +241,99 @@ class GomokuGame {
         }
         
         return true;
+    }
+    
+    // 处理禁手违规
+    handleForbiddenMove(forbiddenCheck) {
+        this.gameOver = true;
+        this.winner = this.currentPlayer === this.BLACK ? this.WHITE : this.BLACK;
+        
+        // 显示禁手违规信息
+        this.showForbiddenMoveDialog(forbiddenCheck);
+        
+        // 更新统计（对手获胜）
+        if (this.winner === this.BLACK) {
+            this.stats.blackWins++;
+        } else {
+            this.stats.whiteWins++;
+        }
+        
+        this.saveStats();
+        this.updateStats();
+        this.updateGameStatus();
+        this.disableBoard();
+    }
+    
+    // 显示禁手违规对话框
+    showForbiddenMoveDialog(forbiddenCheck) {
+        const playerText = this.currentPlayer === this.BLACK ? '黑棋' : '白棋';
+        let message = `${playerText}违反禁手规则！\n\n`;
+        message += `违规类型：${forbiddenCheck.description}\n\n`;
+        message += `${this.currentPlayer === this.BLACK ? '白棋' : '黑棋'}获胜！`;
+        
+        // 创建并显示模态对话框
+        this.showModal('禁手违规', message, forbiddenCheck.reason);
+          // 更新游戏状态显示
+        this.updateGameStatus(`⚠️ ${forbiddenCheck.description} - ${this.currentPlayer === this.BLACK ? '白棋' : '黑棋'}获胜`);
+    }
+    
+    // 显示规则说明
+    showRulesExplanation() {
+        const rules = this.forbiddenRules.getRuleExplanation();
+        
+        let content = `
+            <div class="rules-explanation">
+                <h4>${rules.title}</h4>
+                <p><em>${rules.description}</em></p>
+                
+                ${rules.rules.map(rule => `
+                    <div class="rule-item">
+                        <h5>${rule.name}</h5>
+                        <p>${rule.description}</p>
+                        <div class="rule-example">${rule.example}</div>
+                    </div>
+                `).join('')}
+                
+                <div class="rule-notes">
+                    <strong>重要提示：</strong>
+                    <ul>
+                        ${rules.notes.map(note => `<li>${note}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+        `;
+          this.showModal('五子棋禁手规则说明', content, 'info');
+    }
+    
+    // 更新禁手位置警告
+    updateForbiddenWarnings() {
+        // 清除所有现有的警告
+        const cells = this.gameBoard.querySelectorAll('.cell');
+        cells.forEach(cell => {
+            cell.classList.remove('forbidden-warning');
+        });
+        
+        // 如果游戏未开始或已结束，不显示警告
+        if (!this.gameStarted || this.gameOver) return;
+        
+        // 只为黑棋显示禁手警告
+        if (this.currentPlayer !== this.BLACK) return;
+        
+        // 检查所有空位置，标记可能导致禁手的位置
+        for (let row = 0; row < this.BOARD_SIZE; row++) {
+            for (let col = 0; col < this.BOARD_SIZE; col++) {
+                if (this.board[row][col] === this.EMPTY) {
+                    const forbiddenCheck = this.forbiddenRules.checkForbiddenMove(this.board, row, col, this.BLACK);
+                    if (forbiddenCheck.isForbidden) {
+                        const cell = this.getCellElement(row, col);
+                        if (cell) {
+                            cell.classList.add('forbidden-warning');
+                            cell.title = `禁手警告: ${forbiddenCheck.description}`;
+                        }
+                    }
+                }
+            }
+        }
     }
     
     // AI下棋
@@ -203,6 +365,20 @@ class GomokuGame {
             this.updateGameStatus();
             this.updateCurrentPlayer();
         }
+    }
+    
+    // 启动教程
+    startTutorial() {
+        // 初始化教程系统
+        if (!this.tutorial) {
+            this.tutorial = new ForbiddenRulesTutorial(this);
+        }
+        
+        // 重置游戏状态
+        this.resetGame();
+        
+        // 开始教程
+        this.tutorial.startTutorial();
     }
     
     // 切换玩家
@@ -408,12 +584,345 @@ class GomokuGame {
         localStorage.setItem('whiteWins', this.stats.whiteWins.toString());
         localStorage.setItem('draws', this.stats.draws.toString());
     }
-    
-    // 更新统计显示
+      // 更新统计显示
     updateStats() {
         document.getElementById('blackWins').textContent = this.stats.blackWins;
         document.getElementById('whiteWins').textContent = this.stats.whiteWins;
         document.getElementById('draws').textContent = this.stats.draws;
+    }
+      // 显示模态对话框
+    showModal(title, content, type = 'info') {
+        // 移除已存在的模态框
+        const existingModal = document.querySelector('.modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // 创建模态框
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        
+        // 处理内容格式
+        const isHtmlContent = content.includes('<');
+        const formattedContent = isHtmlContent ? content : content.replace(/\n/g, '<br>');
+        
+        modal.innerHTML = `
+            <div class="modal-content ${type}">
+                <div class="modal-header">
+                    <h3>${title}</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    ${isHtmlContent ? formattedContent : `<p>${formattedContent}</p>`}
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary modal-ok">确定</button>
+                </div>
+            </div>
+        `;
+        
+        // 添加到页面
+        document.body.appendChild(modal);
+        
+        // 绑定关闭事件
+        modal.querySelector('.modal-close').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        modal.querySelector('.modal-ok').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        // 点击背景关闭
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        // 显示动画
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+    }
+    
+    // 切换调试面板
+    toggleDebugPanel() {
+        let debugPanel = document.querySelector('.debug-panel');
+        
+        if (debugPanel) {
+            debugPanel.remove();
+        } else {
+            this.createDebugPanel();
+        }
+    }
+    
+    // 创建调试面板
+    createDebugPanel() {
+        const debugPanel = document.createElement('div');
+        debugPanel.className = 'debug-panel';
+        
+        debugPanel.innerHTML = `
+            <button class="debug-close">&times;</button>
+            <h4>🛠️ 调试面板</h4>
+            
+            <div class="debug-section">
+                <h5>缓存状态</h5>
+                <div class="debug-info">
+                    <div>缓存大小: <span id="cache-size">${this.forbiddenRules.cache.size}</span></div>
+                    <div>最大缓存: ${this.forbiddenRules.maxCacheSize}</div>
+                </div>
+            </div>
+            
+            <div class="debug-section">
+                <h5>当前游戏状态</h5>
+                <div class="debug-info">
+                    <div>游戏模式: ${this.gameMode}</div>
+                    <div>当前玩家: ${this.currentPlayer === this.BLACK ? '黑棋' : '白棋'}</div>
+                    <div>游戏进行中: ${this.gameStarted ? '是' : '否'}</div>
+                    <div>游戏结束: ${this.gameOver ? '是' : '否'}</div>
+                </div>
+            </div>
+            
+            <div class="debug-section">
+                <h5>禁手检测</h5>
+                <div class="debug-info">
+                    <div>黑棋禁手位置: <span id="forbidden-count">0</span></div>
+                    <button id="show-forbidden-analysis" class="btn btn-warning" style="margin-top: 5px; width: 100%; font-size: 0.8rem;">分析当前局面</button>
+                </div>
+            </div>
+            
+            <div class="test-controls">
+                <button id="run-basic-test" class="btn btn-info">基础测试</button>
+                <button id="run-comprehensive-test" class="btn btn-success">综合测试</button>
+            </div>
+            
+            <div class="test-controls">
+                <button id="clear-cache" class="btn btn-secondary">清理缓存</button>
+                <button id="performance-test" class="btn btn-warning">性能测试</button>
+            </div>
+        `;
+        
+        document.body.appendChild(debugPanel);
+        
+        // 绑定调试面板事件
+        debugPanel.querySelector('.debug-close').addEventListener('click', () => {
+            debugPanel.remove();
+        });
+        
+        debugPanel.querySelector('#show-forbidden-analysis').addEventListener('click', () => {
+            this.showForbiddenAnalysis();
+        });
+        
+        debugPanel.querySelector('#run-basic-test').addEventListener('click', () => {
+            if (typeof testForbiddenRules !== 'undefined') {
+                testForbiddenRules();
+            } else {
+                console.log('基础测试函数未找到');
+            }
+        });
+        
+        debugPanel.querySelector('#run-comprehensive-test').addEventListener('click', () => {
+            if (typeof runComprehensiveTest !== 'undefined') {
+                runComprehensiveTest();
+            } else {
+                console.log('综合测试函数未找到');
+            }
+        });
+        
+        debugPanel.querySelector('#clear-cache').addEventListener('click', () => {
+            this.forbiddenRules.clearCache();
+            this.updateDebugInfo();
+            console.log('缓存已清理');
+        });
+        
+        debugPanel.querySelector('#performance-test').addEventListener('click', () => {
+            this.runPerformanceTest();
+        });
+        
+        // 更新调试信息
+        this.updateDebugInfo();
+        
+        // 每秒更新一次调试信息
+        this.debugInterval = setInterval(() => {
+            if (document.querySelector('.debug-panel')) {
+                this.updateDebugInfo();
+            } else {
+                clearInterval(this.debugInterval);
+            }
+        }, 1000);
+    }
+    
+    // 更新调试信息
+    updateDebugInfo() {
+        const cacheSize = document.getElementById('cache-size');
+        const forbiddenCount = document.getElementById('forbidden-count');
+        
+        if (cacheSize) {
+            cacheSize.textContent = this.forbiddenRules.cache.size;
+        }
+        
+        if (forbiddenCount && this.gameStarted && this.currentPlayer === this.BLACK) {
+            let count = 0;
+            for (let row = 0; row < this.BOARD_SIZE; row++) {
+                for (let col = 0; col < this.BOARD_SIZE; col++) {
+                    if (this.board[row][col] === this.EMPTY) {
+                        const result = this.forbiddenRules.checkForbiddenMove(this.board, row, col, this.BLACK);
+                        if (result.isForbidden) count++;
+                    }
+                }
+            }
+            forbiddenCount.textContent = count;
+        }
+    }
+    
+    // 显示禁手分析
+    showForbiddenAnalysis() {
+        if (!this.gameStarted) {
+            this.showModal('分析结果', '请先开始游戏再进行分析');
+            return;
+        }
+        
+        const analysis = this.analyzeForbiddenPositions();
+        let content = `
+            <div class="forbidden-analysis">
+                <h4>当前局面禁手分析</h4>
+                <p><strong>分析时间:</strong> ${new Date().toLocaleTimeString()}</p>
+                <p><strong>当前玩家:</strong> ${this.currentPlayer === this.BLACK ? '黑棋' : '白棋'}</p>
+                
+                <div class="analysis-section">
+                    <h5>禁手统计</h5>
+                    <ul>
+                        <li>长连禁手: ${analysis.longConnection} 个位置</li>
+                        <li>双四禁手: ${analysis.doubleFour} 个位置</li>
+                        <li>双活三禁手: ${analysis.doubleThree} 个位置</li>
+                        <li>总计禁手: ${analysis.total} 个位置</li>
+                    </ul>
+                </div>
+                
+                <div class="analysis-section">
+                    <h5>建议</h5>
+                    <p>${this.getStrategicAdvice(analysis)}</p>
+                </div>
+            </div>
+        `;
+        
+        this.showModal('禁手分析', content, 'info');
+    }
+    
+    // 分析禁手位置
+    analyzeForbiddenPositions() {
+        const analysis = {
+            longConnection: 0,
+            doubleFour: 0,
+            doubleThree: 0,
+            total: 0,
+            positions: []
+        };
+        
+        if (this.currentPlayer !== this.BLACK) {
+            return analysis;
+        }
+        
+        for (let row = 0; row < this.BOARD_SIZE; row++) {
+            for (let col = 0; col < this.BOARD_SIZE; col++) {
+                if (this.board[row][col] === this.EMPTY) {
+                    const result = this.forbiddenRules.checkForbiddenMove(this.board, row, col, this.BLACK);
+                    if (result.isForbidden) {
+                        analysis.total++;
+                        analysis.positions.push({row, col, reason: result.reason});
+                        
+                        switch (result.reason) {
+                            case 'long_connection':
+                                analysis.longConnection++;
+                                break;
+                            case 'double_four':
+                                analysis.doubleFour++;
+                                break;
+                            case 'double_three':
+                                analysis.doubleThree++;
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return analysis;
+    }
+    
+    // 获取战略建议
+    getStrategicAdvice(analysis) {
+        if (analysis.total === 0) {
+            return '✅ 当前没有禁手位置，可以自由下棋。建议寻找进攻或防守的最佳位置。';
+        }
+        
+        let advice = `⚠️ 发现 ${analysis.total} 个禁手位置，需要谨慎下棋。`;
+        
+        if (analysis.longConnection > 0) {
+            advice += ` 注意避免形成长连。`;
+        }
+        
+        if (analysis.doubleFour > 0) {
+            advice += ` 当前有 ${analysis.doubleFour} 个位置会形成双四，避免同时形成两个四。`;
+        }
+        
+        if (analysis.doubleThree > 0) {
+            advice += ` 当前有 ${analysis.doubleThree} 个位置会形成双活三，小心不要同时形成两个活三。`;
+        }
+        
+        advice += ' 建议优先考虑进攻和防守，避免落入禁手陷阱。';
+        
+        return advice;
+    }
+    
+    // 运行性能测试
+    runPerformanceTest() {
+        console.log('🔄 开始性能测试...');
+        
+        const testBoard = Array(15).fill(null).map(() => Array(15).fill(this.EMPTY));
+        
+        // 创建一个复杂的测试局面
+        const testPositions = [
+            [7, 7, this.BLACK], [7, 8, this.BLACK], [8, 7, this.BLACK],
+            [6, 6, this.BLACK], [6, 7, this.BLACK], [5, 5, this.WHITE],
+            [9, 9, this.WHITE], [10, 10, this.WHITE], [4, 4, this.BLACK]
+        ];
+        
+        testPositions.forEach(([row, col, color]) => {
+            testBoard[row][col] = color;
+        });
+        
+        const iterations = 500;
+        const startTime = performance.now();
+        
+        for (let i = 0; i < iterations; i++) {
+            // 测试不同位置的禁手检测
+            const testRow = Math.floor(Math.random() * 15);
+            const testCol = Math.floor(Math.random() * 15);
+            if (testBoard[testRow][testCol] === this.EMPTY) {
+                this.forbiddenRules.checkForbiddenMove(testBoard, testRow, testCol, this.BLACK);
+            }
+        }
+        
+        const endTime = performance.now();
+        const totalTime = endTime - startTime;
+        const avgTime = totalTime / iterations;
+        
+        const result = `
+            性能测试完成！
+            
+            📊 测试结果:
+            • 总测试次数: ${iterations}
+            • 总用时: ${totalTime.toFixed(2)}ms
+            • 平均用时: ${avgTime.toFixed(4)}ms
+            • 缓存命中: ${this.forbiddenRules.cache.size} 条记录
+            
+            ${avgTime < 1.0 ? '✅ 性能优秀！' : avgTime < 5.0 ? '⚠️ 性能良好' : '❌ 性能需要优化'}
+        `;
+        
+        this.showModal('性能测试结果', result);
+        console.log(result);
     }
 }
 

@@ -116,6 +116,18 @@ select:focus {
     border-color: #adb5bd;
 }
 
+.btn-info {
+    background: #17a2b8;
+    color: white;
+    border: 2px solid #17a2b8;
+}
+
+.btn-info:hover {
+    background: #138496;
+    border-color: #117a8b;
+    transform: translateY(-1px);
+}
+
 .game-info {
     display: flex;
     justify-content: space-between;
@@ -136,6 +148,12 @@ select:focus {
 .current-player {
     font-size: 14px;
     color: #666;
+}
+
+.rules-status {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
 }
 
 #currentPlayer {
@@ -186,6 +204,25 @@ select:focus {
 
 .cell.disabled:hover {
     background: #DEB887;
+}
+
+.cell.forbidden-warning {
+    background: #ffebee !important;
+    border: 2px solid #f44336 !important;
+}
+
+.cell.forbidden-warning:hover {
+    background: #ffcdd2 !important;
+}
+
+.cell.forbidden-warning::after {
+    content: '⚠️';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    opacity: 0.7;
 }
 
 .piece {
@@ -352,4 +389,422 @@ select:focus {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+    border: 2px solid #ffc107;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+    border: 2px solid #28a745;
+}
+
+.btn-success:hover {
+    background: #218838;
+    border-color: #1e7e34;
+    transform: translateY(-1px);
+}
+
+.btn-warning:hover {
+    background: #ffca2c;
+    border-color: #ffc720;
+    transform: translateY(-1px);
+}
+
+.tutorial-highlight {
+    background: #fff3cd !important;
+    border: 3px solid #ffc107 !important;
+    animation: tutorialPulse 2s infinite;
+}
+
+@keyframes tutorialPulse {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    50% { 
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+}
+
+.tutorial-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.tutorial-progress {
+    background: #667eea;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    display: inline-block;
+    font-size: 0.8rem;
+    margin-bottom: 15px;
+}
+
+.tutorial-content h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.tutorial-content p {
+    margin: 0 0 15px 0;
+    line-height: 1.6;
+    color: #555;
+}
+
+.tutorial-action {
+    background: #e9ecef;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-style: italic;
+    color: #495057;
+}
+
+.tutorial-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.tutorial-controls button {
+    min-width: 80px;
+}
+
+.modal-content.tutorial {
+    max-width: 600px;
+    width: 95%;
+}
+
+.modal-content.welcome {
+    max-width: 650px;
+    width: 95%;
+}
+
+.welcome-content {
+    padding: 20px;
+}
+
+.welcome-content h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    text-align: center;
+    font-size: 1.4rem;
+}
+
+.feature-highlights {
+    margin: 20px 0;
+}
+
+.feature-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.feature-icon {
+    font-size: 1.5rem;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.feature-item strong {
+    color: #333;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.feature-item div {
+    line-height: 1.4;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.rule-reminder {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+    color: #856404;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.debug-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    z-index: 1000;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.debug-panel h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.debug-section {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.debug-section h5 {
+    margin: 0 0 8px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.debug-info {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #333;
+}
+
+.debug-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+}
+
+.test-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.test-controls button {
+    flex: 1;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+}
+
+.forbidden-analysis {
+    max-width: 100%;
+}
+
+.forbidden-analysis h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.forbidden-analysis h5 {
+    margin: 15px 0 8px 0;
+    color: #555;
+    font-size: 1rem;
+}
+
+.analysis-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.analysis-section ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.analysis-section li {
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.analysis-section p {
+    margin: 10px 0;
+    line-height: 1.6;
+    color: #555;
+}
+
+/* 模态对话框样式 */
+.modal {
+    display: flex;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 15px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+    position: relative;
+}
+
+.modal.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-content.long_connection {
+    border-left: 5px solid #dc3545;
+}
+
+.modal-content.double_four {
+    border-left: 5px solid #fd7e14;
+}
+
+.modal-content.double_three {
+    border-left: 5px solid #ffc107;
+}
+
+.modal-header {
+    padding: 20px 25px 10px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px 25px;
+}
+
+.modal-body p {
+    margin: 0;
+    line-height: 1.6;
+    color: #555;
+}
+
+.modal-footer {
+    padding: 10px 25px 20px;
+    text-align: right;
+}
+
+.modal-footer .btn {
+    min-width: 80px;
+}
+
+/* 禁手规则说明样式 */
+.rules-explanation {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 15px 0;
+}
+
+.rules-explanation h4 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.rule-item {
+    margin-bottom: 15px;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.rule-item h5 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+.rule-item p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.rule-example {
+    font-family: monospace;
+    background: #e9ecef;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.rule-notes {
+    margin-top: 15px;
+    padding: 12px;
+    background: #fff3cd;
+    border-radius: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.rule-notes ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.rule-notes li {
+    margin-bottom: 5px;
+    color: #856404;
+    font-size: 0.9rem;
 }

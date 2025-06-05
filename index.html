@@ -36,19 +36,22 @@
                     <option value="hard">🔴 困难</option>
                     <option value="impossible">⚫ 无法战胜</option>
                 </select>
-            </div>
-            
-            <button id="newGameBtn" class="btn btn-primary">新游戏</button>
+            </div>            <button id="newGameBtn" class="btn btn-primary">新游戏</button>
             <button id="resetBtn" class="btn btn-secondary">重置</button>
+            <button id="rulesBtn" class="btn btn-info">禁手规则</button>
+            <button id="tutorialBtn" class="btn btn-success">新手教程</button>
+            <button id="debugBtn" class="btn btn-warning">调试面板</button>
         </div>
-        
-        <div class="game-info">
+          <div class="game-info">
             <div class="status">
                 <span id="gameStatus">选择游戏模式并开始新游戏</span>
             </div>
             <div class="current-player">
                 <span>当前轮到：</span>
                 <span id="currentPlayer">-</span>
+            </div>
+            <div class="rules-status">
+                <span>🚫 禁手规则：对黑棋有效</span>
             </div>
         </div>
         
@@ -69,10 +72,9 @@
                 <span class="stat-label">平局：</span>
                 <span id="draws">0</span>
             </div>
-        </div>
-    </div>
-    
+        </div>    </div>    <script src="forbidden-rules.js"></script>
     <script src="ai.js"></script>
+    <script src="tutorial.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

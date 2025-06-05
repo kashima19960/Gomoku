@@ -55,14 +55,17 @@ class GomokuAI {
             // 活一
             LIVE_ONE: 1
         };
-        
-        // 方向向量：横、竖、主对角线、副对角线
+          // 方向向量：横、竖、主对角线、副对角线
         this.DIRECTIONS = [
             [0, 1],   // 水平
             [1, 0],   // 垂直
             [1, 1],   // 主对角线
             [1, -1]   // 副对角线
-        ];    }
+        ];
+        
+        // 禁手检测器
+        this.forbiddenRules = new ForbiddenRules();
+    }
     
     // 设置AI难度
     setDifficulty(difficulty) {
@@ -105,13 +108,20 @@ class GomokuAI {
                 return criticalDefenseMove;
             }
         }
-        
-        // 使用极大极小算法搜索最佳位置
+          // 使用极大极小算法搜索最佳位置
         const candidates = this.getCandidateMoves(board, settings.candidateLimit);
         let bestMoves = [];
         let bestScore = -Infinity;
         
         for (const move of candidates) {
+            // 检查AI是否会违反禁手规则（如果AI是黑棋）
+            if (aiColor === this.BLACK) {
+                const forbiddenCheck = this.forbiddenRules.checkForbiddenMove(board, move.row, move.col, aiColor);
+                if (forbiddenCheck.isForbidden) {
+                    continue; // 跳过会导致禁手的位置
+                }
+            }
+            
             const newBoard = this.copyBoard(board);
             newBoard[move.row][move.col] = aiColor;
             
@@ -178,10 +188,17 @@ class GomokuAI {
         
         const settings = this.getCurrentSettings();
         const candidates = this.getCandidateMoves(board, Math.min(8, settings.candidateLimit)); // 限制搜索范围
-        
-        if (isMaximizing) {
+          if (isMaximizing) {
             let maxEval = -Infinity;
             for (const move of candidates) {
+                // 检查AI下棋是否会违反禁手规则
+                if (aiColor === this.BLACK) {
+                    const forbiddenCheck = this.forbiddenRules.checkForbiddenMove(board, move.row, move.col, aiColor);
+                    if (forbiddenCheck.isForbidden) {
+                        continue; // 跳过禁手位置
+                    }
+                }
+                
                 const newBoard = this.copyBoard(board);
                 newBoard[move.row][move.col] = aiColor;
                 const eval_score = this.minimax(newBoard, depth - 1, alpha, beta, false, aiColor, opponent);
@@ -193,6 +210,16 @@ class GomokuAI {
         } else {
             let minEval = Infinity;
             for (const move of candidates) {
+                // 检查对手下棋是否会违反禁手规则
+                if (opponent === this.BLACK) {
+                    const forbiddenCheck = this.forbiddenRules.checkForbiddenMove(board, move.row, move.col, opponent);
+                    if (forbiddenCheck.isForbidden) {
+                        // 如果对手的移动会导致禁手，这对AI有利
+                        minEval = Math.min(minEval, -this.SCORES.FIVE);
+                        continue;
+                    }
+                }
+                
                 const newBoard = this.copyBoard(board);
                 newBoard[move.row][move.col] = opponent;
                 const eval_score = this.minimax(newBoard, depth - 1, alpha, beta, true, aiColor, opponent);
