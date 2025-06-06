@@ -495,9 +495,8 @@ class GomokuAI {
     copyBoard(board) {
         return board.map(row => [...row]);
     }
-    
-    // 提示功能系统
-    getHint(board, playerColor, hintLevel = 'simple') {
+      // 提示功能系统
+    getHint(board, playerColor, hintLevel = 'simple', forbiddenRules) {
         const hintSettings = {
             simple: {
                 depth: 1,
@@ -518,6 +517,9 @@ class GomokuAI {
 
         const settings = hintSettings[hintLevel];
         if (!settings) return null;
+
+        // 临时保存禁手规则引用
+        this.forbiddenRules = forbiddenRules;
 
         // 获取最佳候选位置
         const candidates = this.getBestCandidates(board, playerColor, settings.analysisCount);
@@ -569,17 +571,15 @@ class GomokuAI {
                 score: this.SCORES.LIVE_FOUR,
                 type: 'block'
             });
-        }
-
-        // 获取其他高分位置
-        const otherMoves = this.getCandidatePositions(board);
+        }        // 获取其他高分位置
+        const otherMoves = this.getCandidateMoves(board, limit * 2);
         for (const pos of otherMoves) {
             if (candidates.length >= limit) break;
             
             // 跳过已添加的位置
             if (candidates.some(c => c.row === pos.row && c.col === pos.col)) continue;
 
-            const score = this.evaluatePosition(board, pos.row, pos.col, color);
+            const score = this.evaluatePosition(board, pos.row, pos.col);
             if (score > 0) {
                 candidates.push({
                     row: pos.row,

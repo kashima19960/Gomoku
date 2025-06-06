@@ -938,18 +938,17 @@ class GomokuGame {
     }
     
     // ======== 提示功能 ========
-    
-    // 获取提示
+      // 获取提示
     getHint() {
-        // 检查是否在AI模式
-        if (this.gameMode !== 'ai') {
-            this.showModal('提示功能', '提示功能仅在人机对战模式下可用！', 'warning');
-            return;
-        }
-        
         // 检查游戏是否开始
         if (!this.gameStarted) {
             this.showModal('提示功能', '请先开始新游戏！', 'warning');
+            return;
+        }
+        
+        // 检查是否在AI模式
+        if (this.gameMode !== 'ai') {
+            this.showModal('提示功能', '提示功能仅在人机对战模式下可用！', 'warning');
             return;
         }
         
@@ -977,12 +976,11 @@ class GomokuGame {
         // 显示加载状态
         this.hintBtn.disabled = true;
         this.hintBtn.textContent = '🔄 分析中...';
-        
-        // 使用setTimeout来避免UI阻塞
+          // 使用setTimeout来避免UI阻塞
         setTimeout(() => {
             try {
-                // 获取AI提示
-                const hint = this.ai.getHint(this.board, this.playerColor, hintLevel);
+                // 获取AI提示，传递禁手规则对象
+                const hint = this.ai.getHint(this.board, this.playerColor, hintLevel, this.forbiddenRules);
                 
                 if (hint && hint.suggestions.length > 0) {
                     this.showHintResult(hint);
