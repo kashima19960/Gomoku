@@ -11,6 +11,64 @@ body {
     padding: 20px;
 }
 
+/* 夜间模式适配 - 重点优化棋盘对比度 */
+@media (prefers-color-scheme: dark) {
+    /* 棋盘区域重点适配 */
+    .game-board {
+        background: #5a3c1a;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+        border: 2px solid #704426;
+    }
+    
+    .cell {
+        background: #8b6f47;
+        border: 1px solid #704426;
+    }
+    
+    .cell:hover {
+        background: #a0845a;
+    }
+      /* 黑棋优化 - 深黑色，明显边框，提升对比度 */
+    .piece.black {
+        background: #000000;
+        border: 3px solid #ffffff;
+        box-shadow: 
+            0 3px 10px rgba(0, 0, 0, 0.8),
+            inset 0 1px 2px rgba(255, 255, 255, 0.2);
+    }
+    
+    .piece.black::after {
+        content: "●";
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+    
+    /* 白棋优化 - 纯白色，黑色边框，强对比 */
+    .piece.white {
+        background: #ffffff;
+        border: 3px solid #000000;
+        box-shadow: 
+            0 3px 10px rgba(255, 255, 255, 0.8),
+            inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    .piece.white::after {
+        content: "○";
+        color: #000000;
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -266,12 +324,125 @@ select:focus {
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     color: white;
     box-shadow: 0 2px 8px rgba(44, 62, 80, 0.6);
+    border: 2px solid #1a252f;
 }
 
 .piece.white {
     background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
     color: #2c3e50;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    border: 2px solid #95a5a6;
+}
+
+/* 夜间模式适配 */
+@media (prefers-color-scheme: dark) {    .piece.black {
+        background: 
+            radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+            linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+        color: #ffffff;
+        box-shadow: 
+            0 4px 16px rgba(0, 0, 0, 0.9), 
+            inset 0 2px 4px rgba(255, 255, 255, 0.08),
+            0 0 0 2px #333333,
+            0 0 0 4px rgba(100, 100, 100, 0.3);
+        border: 3px solid #000000;
+        position: relative;
+    }
+    
+    .piece.black::before {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: calc(100% - 6px);
+        height: calc(100% - 6px);
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+        pointer-events: none;
+        z-index: 1;
+    }
+      .piece.black::after {
+        content: "●";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 14px;
+        color: #888888;
+        font-weight: bold;
+        text-shadow: 0 1px 3px rgba(255, 255, 255, 0.2);
+        z-index: 2;
+    }
+    
+    .piece.white {
+        background: 
+            radial-gradient(circle at 30% 30%, rgba(0, 0, 0, 0.08) 0%, transparent 50%),
+            linear-gradient(135deg, #ffffff 0%, #f8f8f8 50%, #ffffff 100%);
+        color: #000000;
+        box-shadow: 
+            0 4px 16px rgba(255, 255, 255, 0.9), 
+            inset 0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 2px #cccccc,
+            0 0 0 4px #ffffff,
+            0 0 10px rgba(255, 255, 255, 0.6);
+        border: 3px solid #d0d0d0;
+        position: relative;
+    }
+    
+    .piece.white::before {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: calc(100% - 6px);
+        height: calc(100% - 6px);
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, transparent 60%);
+        pointer-events: none;
+        z-index: 1;
+    }
+      .piece.white::after {
+        content: "○";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 14px;
+        color: #111111;
+        font-weight: bold;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        z-index: 2;
+    }
+    }
+    /* 夜间模式下棋盘背景调整 */
+    .game-board {
+        background: #654321;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+        border: 2px solid #8B4513;
+    }
+    
+    .cell {
+        background: #D2B48C;
+        border: 1px solid #8B4513;
+    }
+      .cell:hover {
+        background: #DDD1A8;
+    }
+    
+    .cell.forbidden-warning {
+        background: #4a1a1a !important;
+        border: 2px solid #ff6b6b !important;
+    }
+    
+    .cell.forbidden-warning:hover {
+        background: #5a2a2a !important;
+    }
+    
+    .cell.forbidden-warning::after {
+        color: #ff6b6b;
+        opacity: 1;
+        font-size: 14px;
+    }
 }
 
 @keyframes placeChess {
